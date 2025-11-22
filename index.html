@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星座查询 - 太阳/月亮/上升星座运势</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <!-- 配置Tailwind自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 主色调（参考目标页清爽风格）
+                        primary: '#4299e1',
+                        secondary: '#38bdf8',
+                        // 星座专属色（鲜明易区分）
+                        sun: '#f97316',
+                        moon: '#0ea5e9',
+                        rising: '#8b5cf6',
+                        // 辅助色
+                        star: '#fde047',
+                        success: '#22c55e',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+                    },
+                    animation: {
+                        'twinkle': 'twinkle 3s infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        twinkle: {
+                            '0%, 100%': { opacity: 0.6 },
+                            '50%': { opacity: 1 },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .star-bg {
+                background-image: 
+                    radial-gradient(1px 1px at 10px 20px, #fff, rgba(0,0,0,0)),
+                    radial-gradient(1px 1px at 30px 60px, #fff, rgba(0,0,0,0)),
+                    radial-gradient(1px 1px at 40px 140px, #fff, rgba(0,0,0,0)),
+                    radial-gradient(1px 1px at 80px 30px, #fff, rgba(0,0,0,0));
+                background-repeat: repeat;
+                background-size: 150px 150px;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .text-balance {
+                text-wrap: balance;
+            }
+            .score-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                font-weight: bold;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-gray-800 star-bg">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white/95 backdrop-blur-sm sticky top-0 z-50 card-shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <i class="fa fa-star text-star text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">星座运势查询</span>
+                </div>
+                <div class="text-sm text-gray-500">
+                    <span id="currentDate">2025年11月22日</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 今日运势概览（参考目标页风格） -->
+        <section class="bg-white rounded-2xl p-6 mb-8 card-shadow">
+            <h2 class="text-xl font-bold mb-4 flex items-center text-gray-800">
+                <i class="fa fa-calendar-check-o text-primary mr-2"></i>今日星座运势总览
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- 运势卡片示例（参考目标页简洁风格） -->
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">白羊座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">尝试也能有所收获，切忌一昧守候。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">金牛座</span>
+                        <span class="score-badge bg-green-100 text-green-600">80</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">表现活跃，很有异性缘。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">双子座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">心情平静，享受平淡中的快乐。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">巨蟹座</span>
+                        <span class="score-badge bg-green-100 text-green-600">80</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">必要时需拿出些魄力。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">狮子座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">学会委婉地拒绝。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">处女座</span>
+                        <span class="score-badge bg-red-100 text-red-600">100</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">魅力散发，与异性特别有缘。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">天秤座</span>
+                        <span class="score-badge bg-green-100 text-green-600">80</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">欢乐的气氛能让人的心胸更开阔。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">天蝎座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">有机会等着你主动把握。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">射手座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">成由节俭破由奢。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">摩羯座</span>
+                        <span class="score-badge bg-green-100 text-green-600">80</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">嘴甜心善，非常受欢迎。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">水瓶座</span>
+                        <span class="score-badge bg-orange-100 text-orange-600">60</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">要做一个守时、讲原则的人。</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-primary/30 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-medium text-gray-700">双鱼座</span>
+                        <span class="score-badge bg-red-100 text-red-600">100</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2">易成为众人瞩目的焦点，很有优越感。</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 查询表单区域（清爽简洁风格） -->
+        <section class="bg-white rounded-2xl p-6 md:p-8 mb-8 card-shadow">
+            <form id="astroForm" class="space-y-6">
+                <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-6">
+                    <i class="fa fa-user-circle text-primary mr-2"></i>查询你的专属星座运势
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 出生日期 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-600" for="birthDate">
+                            <i class="fa fa-calendar text-primary mr-1"></i> 出生日期 <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="date" 
+                            id="birthDate" 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 transition-all"
+                            required
+                        >
+                    </div>
+                    
+                    <!-- 出生时间 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-600" for="birthTime">
+                            <i class="fa fa-clock-o text-primary mr-1"></i> 出生时间 <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="time" 
+                            id="birthTime" 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 transition-all"
+                            required
+                        >
+                    </div>
+                    
+                    <!-- 出生地点 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-600" for="birthPlace">
+                            <i class="fa fa-map-marker text-primary mr-1"></i> 出生地点
+                        </label>
+                        <input 
+                            type="text" 
+                            id="birthPlace" 
+                            placeholder="例如：北京"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 transition-all"
+                        >
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+                    <div class="flex items-center">
+                        <input 
+                            type="checkbox" 
+                            id="saveInfo" 
+                            class="w-4 h-4 rounded text-primary focus:ring-primary"
+                            checked
+                        >
+                        <label for="saveInfo" class="ml-2 text-sm text-gray-600">保存查询信息，下次直接查看</label>
+                    </div>
+                    
+                    <div class="space-x-3">
+                        <button 
+                            type="button" 
+                            id="resetBtn"
+                            class="px-6 py-3 rounded-lg border border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+                        >
+                            重置
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-8 py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors shadow-md"
+                        >
+                            <i class="fa fa-search mr-2"></i>查询专属运势
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="text-xs text-gray-500 mt-2 bg-gray-50 rounded-lg p-3">
+                    <i class="fa fa-info-circle mr-1 text-primary"></i> 
+                    注：查询结果仅供娱乐参考，出生时间越准确，上升星座结果越精准
+                </div>
+            </form>
+        </section>
+        
+        <!-- 加载动画 -->
+        <div id="loading" class="hidden flex justify-center py-10">
+            <div class="relative">
+                <div class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fa fa-star text-star animate-pulse-slow"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 结果展示区域（简洁易读风格） -->
+        <section id="resultSection" class="hidden space-y-8">
+            <!-- 星座概览卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- 太阳星座卡片 -->
+                <div class="bg-white rounded-2xl p-6 card-shadow border-t-4 border-sun hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold flex items-center text-sun">
+                                <i class="fa fa-sun-o mr-2"></i>太阳星座
+                            </h3>
+                            <p class="text-sm text-gray-500">核心自我 · 本质性格</p>
+                        </div>
+                        <div class="text-3xl font-bold text-sun" id="sunSignSymbol">♈</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xl font-bold text-gray-800" id="sunSignName">白羊座</h4>
+                            <span class="score-badge bg-orange-100 text-orange-600" id="sunScore">60</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">守护星</span>
+                                <span id="sunRulingPlanet" class="font-medium text-gray-800">火星</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">元素</span>
+                                <span id="sunElement" class="font-medium text-gray-800">火象</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">模式</span>
+                                <span id="sunMode" class="font-medium text-gray-800">本位</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">关键词</span>
+                                <span id="sunKeywords" class="font-medium text-gray-800">热情、冲动、领导力</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <span class="text-gray-500 block mb-1">今日短评</span>
+                            <p class="text-sm text-gray-700" id="sunComment">尝试也能有所收获，切忌一昧守候。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 月亮星座卡片 -->
+                <div class="bg-white rounded-2xl p-6 card-shadow border-t-4 border-moon hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold flex items-center text-moon">
+                                <i class="fa fa-moon-o mr-2"></i>月亮星座
+                            </h3>
+                            <p class="text-sm text-gray-500">情感需求 · 内在情绪</p>
+                        </div>
+                        <div class="text-3xl font-bold text-moon" id="moonSignSymbol">♌</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xl font-bold text-gray-800" id="moonSignName">狮子座</h4>
+                            <span class="score-badge bg-orange-100 text-orange-600" id="moonScore">60</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">守护星</span>
+                                <span id="moonRulingPlanet" class="font-medium text-gray-800">太阳</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">元素</span>
+                                <span id="moonElement" class="font-medium text-gray-800">火象</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">模式</span>
+                                <span id="moonMode" class="font-medium text-gray-800">固定</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">关键词</span>
+                                <span id="moonKeywords" class="font-medium text-gray-800">自信、慷慨、戏剧性</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <span class="text-gray-500 block mb-1">今日短评</span>
+                            <p class="text-sm text-gray-700" id="moonComment">学会委婉地拒绝。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 上升星座卡片 -->
+                <div class="bg-white rounded-2xl p-6 card-shadow border-t-4 border-rising hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold flex items-center text-rising">
+                                <i class="fa fa-arrow-up mr-2"></i>上升星座
+                            </h3>
+                            <p class="text-sm text-gray-500">外在形象 · 人生面具</p>
+                        </div>
+                        <div class="text-3xl font-bold text-rising" id="risingSignSymbol">♎</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xl font-bold text-gray-800" id="risingSignName">天秤座</h4>
+                            <span class="score-badge bg-green-100 text-green-600" id="risingScore">80</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">守护星</span>
+                                <span id="risingRulingPlanet" class="font-medium text-gray-800">金星</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">元素</span>
+                                <span id="risingElement" class="font-medium text-gray-800">风象</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">模式</span>
+                                <span id="risingMode" class="font-medium text-gray-800">本位</span>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-gray-500 block mb-1">关键词</span>
+                                <span id="risingKeywords" class="font-medium text-gray-800">平衡、和谐、外交</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <span class="text-gray-500 block mb-1">今日短评</span>
+                            <p class="text-sm text-gray-700" id="risingComment">欢乐的气氛能让人的心胸更开阔。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 星座组合分析 -->
+            <div class="bg-white rounded-2xl p-6 card-shadow">
+                <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800">
+                    <i class="fa fa-lightbulb-o text-star mr-2"></i>星座组合分析
+                </h3>
+                <div class="text-gray-700 leading-relaxed text-balance" id="combinationAnalysis">
+                    你的太阳白羊、月亮狮子、上升天秤组合形成了一个充满活力又注重平衡的性格特质。白羊座的热情冲动与狮子座的自信领导力相结合，让你在人群中总是引人注目；而天秤座的上升星座则为你增添了外交手腕和审美眼光，使你能够在坚持自我的同时保持和谐的人际关系。这种组合让你既有开创事业的勇气，又具备处理复杂情感的能力，是天生的领导者和协调者。
+                </div>
+            </div>
+            
+            <!-- 运势模块（参考目标页简洁分区） -->
+            <div class="bg-white rounded-2xl p-6 card-shadow">
+                <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
+                    <h3 class="text-xl font-semibold flex items-center text-gray-800">
+                        <i class="fa fa-star text-star mr-2"></i>专属运势详情
+                    </h3>
+                    
+                    <div class="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <button class="fortune-tab px-4 py-2 text-sm font-medium bg-primary text-white" data-period="today">今日</button>
+                        <button class="fortune-tab px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors" data-period="week">本周</button>
+                        <button class="fortune-tab px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors" data-period="month">本月</button>
+                    </div>
+                </div>
+                
+                <!-- 今日运势内容 -->
+                <div class="fortune-content" id="todayFortune">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- 太阳星座运势 -->
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-lg font-medium text-sun mb-4 flex items-center">
+                                <i class="fa fa-sun-o mr-2"></i>太阳星座运势
+                            </h4>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500 block mb-1">核心状态</span>
+                                    <p class="text-gray-700">精力中等，适合尝试新事物但不宜过度冒险</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">事业学业</span>
+                                    <p class="text-gray-700">主动出击会有意外收获，守旧模式难有突破</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">人际互动</span>
+                                    <p class="text-gray-700">朋友间有互助机会，陌生人可能带来新资源</p>
+                                </div>
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <span class="px-2 py-1 bg-sun/10 text-sun text-xs rounded-full">幸运色：红色</span>
+                                    <span class="px-2 py-1 bg-sun/10 text-sun text-xs rounded-full">幸运数字：9</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 月亮星座运势 -->
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-lg font-medium text-moon mb-4 flex items-center">
+                                <i class="fa fa-moon-o mr-2"></i>月亮星座运势
+                            </h4>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500 block mb-1">情绪状态</span>
+                                    <p class="text-gray-700">内心有小波动，需要适当自我调节</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">情感需求</span>
+                                    <p class="text-gray-700">渴望被理解，适当表达感受更易获得支持</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">亲密关系</span>
+                                    <p class="text-gray-700">避免勉强他人，学会委婉拒绝不合理要求</p>
+                                </div>
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <span class="px-2 py-1 bg-moon/10 text-moon text-xs rounded-full">幸运色：金色</span>
+                                    <span class="px-2 py-1 bg-moon/10 text-moon text-xs rounded-full">幸运数字：5</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 上升星座运势 -->
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-lg font-medium text-rising mb-4 flex items-center">
+                                <i class="fa fa-arrow-up mr-2"></i>上升星座运势
+                            </h4>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500 block mb-1">外在表现</span>
+                                    <p class="text-gray-700">亲和力强，容易给人留下良好第一印象</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">机遇挑战</span>
+                                    <p class="text-gray-700">社交场合有机遇，但需主动把握才会生效</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">社交建议</span>
+                                    <p class="text-gray-700">多参与集体活动，开阔心胸更易收获好运</p>
+                                </div>
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <span class="px-2 py-1 bg-rising/10 text-rising text-xs rounded-full">幸运色：蓝色</span>
+                                    <span class="px-2 py-1 bg-rising/10 text-rising text-xs rounded-full">幸运数字：6</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 运势总结 -->
+                    <div class="mt-6 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h4 class="text-md font-medium mb-3 text-gray-800">今日运势总结</h4>
+                        <p class="text-sm text-gray-700">
+                            今天整体运势中等偏上，太阳星座的主动特质与上升星座的社交优势相结合，适合拓展人脉和尝试新事物。月亮星座提示需关注情绪调节，避免因小波动影响判断。
+                            把握白天的黄金时段处理重要事务，晚上适合放松充电。整体而言，行动比等待更易收获成果，但需注意适度原则。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- 本周运势 (默认隐藏) -->
+                <div class="fortune-content hidden" id="weekFortune">
+                    <div class="space-y-6 text-sm">
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-lg font-medium mb-3 text-gray-800">本周整体运势</h4>
+                            <p class="text-gray-700">
+                                本周整体运势稳步上升，尤其是在事业和人际关系方面。周初适合规划和准备，周中开始行动，周末收获成果。
+                                注意周三和周四可能出现的小波折，保持冷静应对即可。
+                            </p>
+                        </div>
+                        
+                        <!-- 分星座运势 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <h5 class="text-sun font-medium mb-3">太阳星座</h5>
+                                <p class="text-gray-700">事业运佳，团队合作带来突破，周五有重要会议或决策。</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <h5 class="text-moon font-medium mb-3">月亮星座</h5>
+                                <p class="text-gray-700">情绪起伏，周中需关注家人健康，周末适合放松和自我提升。</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <h5 class="text-rising font-medium mb-3">上升星座</h5>
+                                <p class="text-gray-700">社交活跃期，新认识的人可能带来长期合作机会，把握周二周四。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 本月运势 (默认隐藏) -->
+                <div class="fortune-content hidden" id="monthFortune">
+                    <div class="space-y-6 text-sm">
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-lg font-medium mb-3 text-gray-800">本月整体运势</h4>
+                            <p class="text-gray-700">
+                                本月是充满机遇的一个月，尤其是在事业发展和财务规划方面。上半月适合开拓新领域，下半月巩固成果。
+                                月中水星逆行期间，注意沟通细节和电子设备维护。
+                            </p>
+                        </div>
+                        
+                        <!-- 重点日期提醒 -->
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 class="text-md font-medium mb-4 text-gray-800">重点日期提醒</h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <span class="text-star mr-3 mt-0.5">★</span>
+                                    <span><strong>5日-7日：</strong>事业关键期，适合提出新项目或晋升申请</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-star mr-3 mt-0.5">★</span>
+                                    <span><strong>12日：</strong>水星逆行开始，重要决策延后</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-star mr-3 mt-0.5">★</span>
+                                    <span><strong>18日-20日：</strong>财务运势高峰，适合投资理财</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-star mr-3 mt-0.5">★</span>
+                                    <span><strong>25日：</strong>满月影响情绪，注意休息和放松</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 分享和订阅区域 -->
+            <div class="bg-white rounded-2xl p-6 card-shadow">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <button id="subscribeBtn" class="px-5 py-2.5 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors text-sm flex items-center">
+                        <i class="fa fa-bell mr-2"></i>订阅每日运势
+                    </button>
+                    
+                    <div class="flex space-x-3">
+                        <button class="w-10 h-10 rounded-full bg-[#1DA1F2]/10 border border-[#1DA1F2]/30 flex items-center justify-center hover:bg-[#1DA1F2]/20 transition-colors">
+                            <i class="fa fa-twitter text-[#1DA1F2]"></i>
+                        </button>
+                        <button class="w-10 h-10 rounded-full bg-[#1877F2]/10 border border-[#1877F2]/30 flex items-center justify-center hover:bg-[#1877F2]/20 transition-colors">
+                            <i class="fa fa-facebook text-[#1877F2]"></i>
+                        </button>
+                        <button class="w-10 h-10 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-center hover:bg-[#25D366]/20 transition-colors">
+                            <i class="fa fa-whatsapp text-[#25D366]"></i>
+                        </button>
+                        <button id="shareImageBtn" class="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center hover:bg-primary/20 transition-colors">
+                            <i class="fa fa-share-alt text-primary"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="mt-auto py-6 px-4 text-center text-gray-500 text-sm bg-white/90 border-t border-gray-200">
+        <p>© 2025 星座运势查询 | 仅供娱乐参考，非专业占星指导</p>
+        <p class="mt-2">隐私声明：我们不会存储您的个人敏感信息</p>
+    </footer>
+    
+    <!-- 模态框 -->
+    <div id="modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 card-shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">订阅每日运势</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="modalContent">
+                <form id="subscribeForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1" for="email">邮箱地址</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            placeholder="your@email.com"
+                            class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1" for="frequency">推送频率</label>
+                        <select 
+                            id="frequency" 
+                            class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700"
+                        >
+                            <option value="daily">每日</option>
+                            <option value="weekly">每周</option>
+                            <option value="monthly">每月</option>
+                        </select>
+                    </div>
+                    
+                    <button 
+                        type="submit"
+                        class="w-full py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
+                    >
+                        确认订阅
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 星座数据（包含运势评分和短评）
+        const zodiacSigns = [
+            { 
+                name: '白羊座', symbol: '♈', dates: '3.21-4.19', 
+                rulingPlanet: '火星', element: '火象', mode: '本位', keywords: '热情、冲动、领导力',
+                score: 60, comment: '尝试也能有所收获，切忌一昧守候。'
+            },
+            { 
+                name: '金牛座', symbol: '♉', dates: '4.20-5.20', 
+                rulingPlanet: '金星', element: '土象', mode: '固定', keywords: '稳定、务实、享受',
+                score: 80, comment: '表现活跃，很有异性缘。'
+            },
+            { 
+                name: '双子座', symbol: '♊', dates: '5.21-6.21', 
+                rulingPlanet: '水星', element: '风象', mode: '变动', keywords: '灵活、好奇、沟通',
+                score: 60, comment: '心情平静，享受平淡中的快乐。'
+            },
+            { 
+                name: '巨蟹座', symbol: '♋', dates: '6.22-7.22', 
+                rulingPlanet: '月亮', element: '水象', mode: '本位', keywords: '敏感、保护、家庭',
+                score: 80, comment: '必要时需拿出些魄力。'
+            },
+            { 
+                name: '狮子座', symbol: '♌', dates: '7.23-8.22', 
+                rulingPlanet: '太阳', element: '火象', mode: '固定', keywords: '自信、慷慨、戏剧性',
+                score: 60, comment: '学会委婉地拒绝。'
+            },
+            { 
+                name: '处女座', symbol: '♍', dates: '8.23-9.22', 
+                rulingPlanet: '水星', element: '土象', mode: '变动', keywords: '细致、分析、服务',
+                score: 100, comment: '魅力散发，与异性特别有缘。'
+            },
+            { 
+                name: '天秤座', symbol: '♎', dates: '9.23-10.23', 
+                rulingPlanet: '金星', element: '风象', mode: '本位', keywords: '平衡、和谐、外交',
+                score: 80, comment: '欢乐的气氛能让人的心胸更开阔。'
+            },
+            { 
+                name: '天蝎座', symbol: '♏', dates: '10.24-11.22', 
+                rulingPlanet: '冥王星', element: '水象', mode: '固定', keywords: '深刻、转化、力量',
+                score: 60, comment: '有机会等着你主动把握。'
+            },
+            { 
+                name: '射手座', symbol: '♐', dates: '11.23-12.21', 
+                rulingPlanet: '木星', element: '火象', mode: '变动', keywords: '乐观、探索、哲学',
+                score: 60, comment: '成由节俭破由奢。'
+            },
+            { 
+                name: '摩羯座', symbol: '♑', dates: '12.22-1.19', 
+                rulingPlanet: '土星', element: '土象', mode: '本位', keywords: '务实、纪律、成就',
+                score: 80, comment: '嘴甜心善，非常受欢迎。'
+            },
+            { 
+                name: '水瓶座', symbol: '♒', dates: '1.20-2.18', 
+                rulingPlanet: '天王星', element: '风象', mode: '固定', keywords: '创新、独立、人道',
+                score: 60, comment: '要做一个守时、讲原则的人。'
+            },
+            { 
+                name: '双鱼座', symbol: '♓', dates: '2.19-3.20', 
+                rulingPlanet: '海王星', element: '水象', mode: '变动', keywords: '直觉、同情、艺术',
+                score: 100, comment: '易成为众人瞩目的焦点，很有优越感。'
+            }
+        ];
+        
+        // DOM元素
+        const astroForm = document.getElementById('astroForm');
+        const resultSection = document.getElementById('resultSection');
+        const loading = document.getElementById('loading');
+        const resetBtn = document.getElementById('resetBtn');
+        const fortuneTabs = document.querySelectorAll('.fortune-tab');
+        const fortuneContents = document.querySelectorAll('.fortune-content');
+        const subscribeBtn = document.getElementById('subscribeBtn');
+        const modal = document.getElementById('modal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const subscribeForm = document.getElementById('subscribeForm');
+        const currentDate = document.getElementById('currentDate');
+        
+        // 初始化日期显示
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置当前日期
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            currentDate.textContent = `${year}年${month}月${day}日`;
+            
+            // 加载保存的信息
+            loadSavedInfo();
+            
+            // 表单提交事件
+            astroForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                calculateAstroInfo();
+            });
+            
+            // 重置按钮
+            resetBtn.addEventListener('click', function() {
+                astroForm.reset();
+                localStorage.removeItem('astroInfo');
+            });
+            
+            // 运势标签切换
+            fortuneTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const period = this.dataset.period;
+                    
+                    // 更新标签样式
+                    fortuneTabs.forEach(t => {
+                        t.classList.remove('bg-primary', 'text-white');
+                        t.classList.add('hover:bg-gray-50');
+                    });
+                    this.classList.add('bg-primary', 'text-white');
+                    this.classList.remove('hover:bg-gray-50');
+                    
+                    // 显示对应内容
+                    fortuneContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    document.getElementById(`${period}Fortune`).classList.remove('hidden');
+                });
+            });
+            
+            // 订阅按钮
+            subscribeBtn.addEventListener('click', function() {
+                document.getElementById('modalTitle').textContent = '订阅每日运势';
+                modal.classList.remove('hidden');
+            });
+            
+            // 关闭模态框
+            closeModalBtn.addEventListener('click', function() {
+                modal.classList.add('hidden');
+            });
+            
+            // 订阅表单提交
+            subscribeForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('订阅成功！每日运势将发送到您的邮箱。');
+                modal.classList.add('hidden');
+            });
+            
+            // 点击模态框外部关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+        
+        // 加载保存的信息
+        function loadSavedInfo() {
+            const savedInfo = localStorage.getItem('astroInfo');
+            if (savedInfo) {
+                const info = JSON.parse(savedInfo);
+                document.getElementById('birthDate').value = info.birthDate;
+                document.getElementById('birthTime').value = info.birthTime;
+                document.getElementById('birthPlace').value = info.birthPlace || '';
+            }
+        }
+        
+        // 计算星座信息
+        function calculateAstroInfo() {
+            // 显示加载动画
+            loading.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+            
+            // 获取表单数据
+            const birthDate = document.getElementById('birthDate').value;
+            const birthTime = document.getElementById('birthTime').value;
+            const birthPlace = document.getElementById('birthPlace').value;
+            const saveInfo = document.getElementById('saveInfo').checked;
+            
+            // 保存信息
+            if (saveInfo) {
+                localStorage.setItem('astroInfo', JSON.stringify({
+                    birthDate,
+                    birthTime,
+                    birthPlace
+                }));
+            }
+            
+            // 模拟计算延迟
+            setTimeout(function() {
+                // 随机生成星座（实际应用中需要真实的占星计算）
+                const sunSign = getRandomSign();
+                const moonSign = getRandomSign();
+                const risingSign = getRandomSign();
+                
+                // 更新星座信息（包含评分和短评）
+                updateSignInfo('sun', sunSign);
+                updateSignInfo('moon', moonSign);
+                updateSignInfo('rising', risingSign);
+                
+                // 更新组合分析
+                updateCombinationAnalysis(sunSign, moonSign, risingSign);
+                
+                // 隐藏加载动画，显示结果
+                loading.classList.add('hidden');
+                resultSection.classList.remove('hidden');
+                
+                // 滚动到结果区域
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            }, 1500);
+        }
+        
+        // 获取随机星座
+        function getRandomSign() {
+            return zodiacSigns[Math.floor(Math.random() * zodiacSigns.length)];
+        }
+        
+        // 更新星座信息（新增评分和短评）
+        function updateSignInfo(type, sign) {
+            document.getElementById(`${type}SignSymbol`).textContent = sign.symbol;
+            document.getElementById(`${type}SignName`).textContent = sign.name;
+            document.getElementById(`${type}RulingPlanet`).textContent = sign.rulingPlanet;
+            document.getElementById(`${type}Element`).textContent = sign.element;
+            document.getElementById(`${type}Mode`).textContent = sign.mode;
+            document.getElementById(`${type}Keywords`).textContent = sign.keywords;
+            document.getElementById(`${type}Score`).textContent = sign.score;
+            document.getElementById(`${type}Comment`).textContent = sign.comment;
+            
+            // 根据分数设置评分徽章颜色
+            const scoreBadge = document.getElementById(`${type}Score`);
+            if (sign.score === 100) {
+                scoreBadge.className = 'score-badge bg-red-100 text-red-600';
+            } else if (sign.score >= 80) {
+                scoreBadge.className = 'score-badge bg-green-100 text-green-600';
+            } else {
+                scoreBadge.className = 'score-badge bg-orange-100 text-orange-600';
+            }
+        }
+        
+        // 更新组合分析
+        function updateCombinationAnalysis(sun, moon, rising) {
+            const combinations = [
+                `你的太阳${sun.name}、月亮${moon.name}、上升${rising.name}组合形成了一个独特而丰富的性格图谱。${sun.name}的${sun.keywords.split('、')[0]}特质为你奠定了核心基调，${moon.name}的${moon.keywords.split('、')[0]}情感需求让你在亲密关系中展现出不同的一面，而${rising.name}的上升星座则赋予你${rising.keywords.split('、')[0]}的外在形象。这种组合让你既有内在的深度，又有外在的魅力，在不同场合都能展现出多面的个性。`,
+                
+                `${sun.name}的太阳星座赋予你天生的${sun.keywords.split('、')[0]}和${sun.keywords.split('、')[1]}，${moon.name}的月亮星座则让你在情感上追求${moon.keywords.split('、')[0]}，而${rising.name}的上升星座使你在社交场合中表现出${rising.keywords.split('、')[0]}的特质。三者结合，让你成为一个既有主见又懂得变通的人，能够平衡个人需求与他人期望。`,
+                
+                `太阳${sun.name}代表你的核心身份，${sun.element}元素赋予你${sun.keywords.split('、')[0]}的能量；月亮${moon.name}揭示你的情感世界，${moon.mode}模式让你在情绪处理上${moon.keywords.split('、')[0]}；上升${rising.name}塑造你的外在形象，${rising.rulingPlanet}的影响使你在与人交往中展现${rising.keywords.split('、')[0]}的特质。这种组合让你在个人成长和人际关系中都能找到独特的平衡点。`
+            ];
+            
+            document.getElementById('combinationAnalysis').textContent = combinations[Math.floor(Math.random() * combinations.length)];
+        }
+    </script>
+</body>
+</html>
